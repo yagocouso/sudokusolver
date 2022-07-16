@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+Capture.py
+CNN.py
+
 # C extensions
 *.so
 
