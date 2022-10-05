@@ -5,7 +5,7 @@ __pycache__/
 
 Capture.py
 CNN.py
-pylint.d/
+
 
 # C extensions
 *.so
