@@ -7,32 +7,31 @@ Created on Sun May  1 09:02:25 2022
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import time
+from keras.models import load_model
 
-sudoku = np.zeros(shape=[9, 9])
-row, col = [], []
-row_list, col_list = [], []
+sudoku = np.full(shape=[9, 9], fill_value=None)
+row, col, row_list, col_list = [], [], [], []
 unique = set(range(1, 10))
 font = cv2.FONT_HERSHEY_SIMPLEX
 
-# TODO delete
-sudoku = np.array(
-    [[5., 3., None, None, 7., None, None, None, None],
-    [6., None, None, 1., 9., 5., None, None, None],
-    [None, 9, 8., None, None, None, None, 6., None],
-    [8., None, None, None, 6., None, None, None, 3.],
-    [4., None, None, 8., None, 3., None, None, 1.],
-    [7., None, None, None, 2., None, None, None, 6.],
-    [None, 6, None, None, None, None, 2., 8., None],
-    [None, None, None, 4., 1., 9., None, None, None],
-    [None, None, None, None, 8., None, None, 7., 9.]]
-)
+# Load model
+model = load_model("./model.h5")
+
+# sudoku = np.array(
+#     [[None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None],
+#     [None, None, None, None, None, None, None, None, None]]
+# )
 
 points = np.empty(shape=[9, 9, 2], dtype=int)
-
-
 
 def get_points(points):
     values = np.array(points).astype(int)
@@ -64,70 +63,75 @@ def solver():
             return sudoku[row, col], row, col
     return None, None, None
 
-img = cv2.imread('sudoku.png')
+def preprocesing(number_img):
+    number_img = cv2.resize(number_img, (28, 28), interpolation = cv2.INTER_AREA)
+    inverted_image = cv2.bitwise_not(number_img)
+    inverted_image = inverted_image.reshape(1, 28*28).astype('float32')
+    inverted_image = inverted_image / 255
+    return float(np.argmax(model.predict(inverted_image)))
+
+def get_crosses(lines):
+    global row, col
+    lines = lines.reshape(lines.shape[0], lines.shape[2])
+    for r, theta in lines: 
+        a, b = np.cos(theta), np.sin(theta) 
+        x0, y0 = a*r, b*r
+        if a < 1: col.append([y0 + 1000*(a), y0 - 1000*(a)])
+        if b < 1: row.append([x0 + 1000*(-b), x0 - 1000*(-b)])
+    return row, col
 
 
-# Load picture
-img = cv2.imread('sudoku.png')
-
-# Convert to grees scale
-cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-# Detectamos bordes con el método Cany
-canny = cv2.Canny(img, 50, 150)
-
-# Apply detect lines with Hough
-lines = cv2.HoughLines(canny,1,np.pi/180, 200) 
-lines = lines.reshape(lines.shape[0], lines.shape[2])
-
-for r, theta in lines: 
-    a, b = np.cos(theta), np.sin(theta) 
-    x0, y0 = a*r, b*r
-    if a < 1: col.append([y0 + 1000*(a), y0 - 1000*(a)])
-    if b < 1: row.append([x0 + 1000*(-b), x0 - 1000*(-b)])
 
 
-row = get_points(row)
-col = get_points(col)
 
-elements = list(range(col.shape[0]))
-for i in elements:
-    row_list += elements
-    col_list += elements[i:] + elements[:i]
+
+if __name__ == "__main__":
+    # Load picture
+    orig = cv2.imread('sudoku.png')
     
-
-cuts = np.concatenate((row[row_list], col[col_list]), axis=1)
-
-for i in range(len(cuts)):
-    points[row_list[i], col_list[i]] = [cuts[i, 0], cuts[i, 3]]
+    # Convert to grees scale
+    img = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
     
-    if sudoku[row_list[i], col_list[i]] == None: continue
+    # Detectamos bordes con el método Cany
+    canny = cv2.Canny(img, 50, 150)
     
-    cv2.putText(img, str(int(sudoku[row_list[i], col_list[i]])), tuple(points[row_list[i], col_list[i]]), font,1,(0, 0, 255), 2, cv2.LINE_AA)
-    # sudoku[lista_y[i], lista_x[i]] = i
-    # cv2.imshow('image',canny[cuts[i, 0]:cuts[i, 1], cuts[i, 2]:cuts[i, 3]])
-    # cv2.waitKey(0)
-    # cv2.rectangle(img,(cuts[i, 0],cuts[i, 2]),(cuts[i, 1],cuts[i, 3]),(0,255,0),1)
-
-# cv2.imshow('image',img)q
-# cv2.waitKey(0)
-
-while True:
-    # Capture frame-by-frame
-    frame = img.copy()
-
-    number, row, col = solver()
+    # Apply detect lines with Hough
+    lines = cv2.HoughLines(canny, 1, np.pi/180, 200) 
     
-    cv2.putText(frame, str(number), tuple(points[row, col]), font,1,(0, 255, 0), 2, cv2.LINE_AA)
-    cv2.putText(img, str(number), tuple(points[row, col]), font,1,(0, 255, 0), 2, cv2.LINE_AA)
-
-    cv2.imshow('frame', frame)
-    time.sleep(1)
-    if cv2.waitKey(1) == ord('q'):
-        break
+    # Get points from lines
+    row, col = get_crosses(lines)
+    row = get_points(row)
+    col = get_points(col)
     
-
-# When everything done, release the capture
-cv2.destroyAllWindows()
-
+    elements = list(range(col.shape[0]))
+    for i in elements:
+        row_list += elements
+        col_list += elements[i:] + elements[:i]
+        
+    cuts = np.concatenate((row[row_list], col[col_list]), axis=1)
+    
+    for i in range(len(cuts)):
+        points[row_list[i], col_list[i]] = [cuts[i, 2] + 10, cuts[i, 1] - 10]
+        number = preprocesing(img[cuts[i, 0]:cuts[i, 1], cuts[i, 2]:cuts[i, 3]])
+        if not int(number): continue
+        sudoku[row_list[i], col_list[i]] = number
+        cv2.putText(orig, str(int(sudoku[row_list[i], col_list[i]])), tuple(points[row_list[i], col_list[i]]), font,1,(0, 0, 255), 2, cv2.LINE_AA)
+        
+    
+    while True:
+        number, row, col = solver()
+        #Checking if we can't solver more
+        finish = not number and not row and not col
+        
+        if finish or cv2.waitKey(1) == ord('q'):
+            time.sleep(10 if finish else 0)
+            break
+        
+        cv2.putText(orig, str(number), tuple(points[row, col]), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.imshow('frame', orig)
+        time.sleep(1)
+        
+    # When everything done, close windows
+    cv2.destroyAllWindows()
+    
 
