@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Personal files
 Capture.py
 CNN.py
 

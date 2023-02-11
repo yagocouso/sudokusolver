@@ -1,0 +1,10 @@
+__title__ = 'sudokusolver'
+__description__ = 'Solver for sodoku puzzle'
+__url__ = 'https://github.com/yagocouso/sudokusolver'
+__version__ = '1.0.0'
+__build__ = 0x000001
+__author__ = 'Yago Couso'
+#__author_email__ = ''
+__license__ = 'MIT'
+#__copyright__ = ''
+#__cake__ = u''
